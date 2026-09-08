@@ -189,7 +189,7 @@ make collector-logs
 - 強制kill・storage破損では最後に永続化したoffsetまで戻り、重複し得る。
 - Collector停止が14日を超えて対象ローテーションファイルが削除されれば欠損する。
 - Docker volumeを削除するとoffsetを失い、残存ファイルを先頭から再読して重複する。
-- S3停止中は永続queueへ退避するが、disk枯渇・volume削除・破損では欠損し得る。
+- S3 exporterのqueueはCollector再起動時の未送信データを永続化する。ただしalpha exporterは共通の無期限 `retry_on_failure` を持たないため、AWS SDKの10回retryを使い切った送信失敗は欠損し得る。
 
 これはexactly-once保証ではありません。保証を誇張せず、欠損・重複条件を観察可能にするPoCです。
 
@@ -230,4 +230,3 @@ Phase 2でOpenTelemetry PHP SDKによるtrace、Phase 3でlogへ `trace_id` / `s
 - [AWS S3 Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awss3exporter)
 - [File Log Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/filelogreceiver)
 - [File Storage Extension](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/storage/filestorage)
-

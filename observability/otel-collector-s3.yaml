@@ -74,6 +74,7 @@ exporters:
   debug:
     verbosity: detailed
   awss3:
+    marshaler: otlp_json
     s3uploader:
       region: ${env:AWS_REGION}
       s3_bucket: ${env:AWS_S3_BUCKET}
@@ -81,18 +82,15 @@ exporters:
       s3_partition_format: year=%Y/month=%m/day=%d/hour=%H
       s3_partition_timezone: UTC
       file_prefix: otel-logs
-      marshaler: otlp_json
       compression: gzip
       unique_key_func_name: uuidv7
+      retry_mode: standard
+      retry_max_attempts: 10
+      retry_max_backoff: 30s
     sending_queue:
       enabled: true
       storage: file_storage
       queue_size: 1000
-    retry_on_failure:
-      enabled: true
-      initial_interval: 5s
-      max_interval: 30s
-      max_elapsed_time: 0s
 
 service:
   extensions: [file_storage]
