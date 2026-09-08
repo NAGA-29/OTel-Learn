@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-otel_demo}
+      POSTGRES_USER: ${POSTGRES_USER:-otel_demo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-otel_demo}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-otel_demo} -d ${POSTGRES_DB:-otel_demo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      APP_NAME: OTel Laravel Demo
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      LOG_CHANNEL: json
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-otel_demo}
+      DB_USERNAME: ${POSTGRES_USER:-otel_demo}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-otel_demo}
+    command: >-
+      sh -c "php artisan migrate --force &&
+      php artisan db:seed --force &&
+      php artisan serve --host=0.0.0.0 --port=8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - backend-vendor:/var/www/html/vendor
+      - laravel-logs:/var/www/html/storage/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      - backend
+
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.136.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - laravel-logs:/var/log/laravel:ro
+      - collector-state:/var/lib/otelcol
+    depends_on:
+      - backend
+
+  collector-s3:
+    profiles: ["aws"]
+    image: otel/opentelemetry-collector-contrib:0.136.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-1}
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:?Set AWS_S3_BUCKET before starting collector-s3}
+      AWS_SDK_LOAD_CONFIG: "1"
+    volumes:
+      - ./observability/otel-collector-s3.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - laravel-logs:/var/log/laravel:ro
+      - collector-state:/var/lib/otelcol
+      - ${HOME}/.aws:/home/otelcol-contrib/.aws:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
+  backend-vendor:
+  frontend-node-modules:
+  laravel-logs:
+  collector-state:

@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: otel_demo
+          POSTGRES_USER: otel_demo
+          POSTGRES_PASSWORD: otel_demo
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U otel_demo -d otel_demo"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: otel_demo
+      DB_USERNAME: otel_demo
+      DB_PASSWORD: otel_demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: php artisan test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+
+  terraform-and-collector:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - run: terraform -chdir=infrastructure/terraform/environments/dev fmt -check -recursive
+      - run: terraform -chdir=infrastructure/terraform/environments/dev init -backend=false
+      - run: terraform -chdir=infrastructure/terraform/environments/dev validate
+      - name: Validate debug Collector config
+        run: >-
+          docker run --rm
+          -e APP_ENV=local -e APP_VERSION=0.1.0
+          -v "$PWD/observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro"
+          otel/opentelemetry-collector-contrib:0.136.0
+          validate --config=/etc/otelcol-contrib/config.yaml
+      - name: Validate S3 Collector config
+        run: >-
+          docker run --rm
+          -e APP_ENV=local -e APP_VERSION=0.1.0
+          -e AWS_REGION=ap-northeast-1 -e AWS_S3_BUCKET=validation-only
+          -v "$PWD/observability/otel-collector-s3.yaml:/etc/otelcol-contrib/config.yaml:ro"
+          otel/opentelemetry-collector-contrib:0.136.0
+          validate --config=/etc/otelcol-contrib/config.yaml
+
