@@ -38,6 +38,8 @@ make up
 - Laravel API: <http://localhost:8000/api/suppliers>
 - Health check: <http://localhost:8000/up>
 
+`collector-init` は永続化ボリュームを Collector の実行ユーザー（UID 10001）が書き込めるように初期化する一回限りの補助サービスです。Collector を root で実行しないために必要であり、`Exited (0)` と表示されるのは正常です。
+
 ```bash
 curl -s http://localhost:8000/api/suppliers
 curl -s http://localhost:8000/api/suppliers/1
