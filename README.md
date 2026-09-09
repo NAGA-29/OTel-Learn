@@ -229,6 +229,11 @@ Phase 2でOpenTelemetry PHP SDKによるtrace、Phase 3でlogへ `trace_id` / `s
 ## References
 
 - [OpenTelemetry Logs](https://opentelemetry.io/docs/concepts/signals/logs/)
+- [OpenTelemetry Collector overview](https://opentelemetry.io/docs/collector/)
+- [OpenTelemetry Collector configuration](https://opentelemetry.io/docs/collector/configuration/)
+- [OpenTelemetry Collector Contrib components](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/README.md)
 - [AWS S3 Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awss3exporter)
 - [File Log Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/filelogreceiver)
 - [File Storage Extension](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/storage/filestorage)
+- [Transform Processor / OTTL](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor)
+- [Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter)
