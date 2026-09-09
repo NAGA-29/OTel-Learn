@@ -56,6 +56,12 @@ services:
     depends_on:
       - backend
 
+  collector-init:
+    image: busybox:1.37.0
+    command: ["chown", "-R", "10001:10001", "/var/lib/otelcol"]
+    volumes:
+      - collector-state:/var/lib/otelcol
+
   collector:
     image: otel/opentelemetry-collector-contrib:0.136.0
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
@@ -67,7 +73,10 @@ services:
       - laravel-logs:/var/log/laravel:ro
       - collector-state:/var/lib/otelcol
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      collector-init:
+        condition: service_completed_successfully
 
   collector-s3:
     profiles: ["aws"]
@@ -86,7 +95,10 @@ services:
       - collector-state:/var/lib/otelcol
       - ${HOME}/.aws:/home/otelcol-contrib/.aws:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      collector-init:
+        condition: service_completed_successfully
 
 volumes:
   postgres-data:
