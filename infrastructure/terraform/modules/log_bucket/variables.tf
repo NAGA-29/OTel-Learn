@@ -34,5 +34,8 @@ variable "collector_role_principal_arns" {
   description = "AWS principal ARNs allowed to assume the optional collector role. Empty disables role creation."
   type        = list(string)
   default     = []
+  validation {
+    condition     = alltrue([for arn in var.collector_role_principal_arns : arn != "*" && can(regex("^arn:[^:]+:iam::[0-9]{12}:(root|user/.+|role/.+)$", arn))])
+    error_message = "collector_role_principal_arns must contain explicit IAM principal ARNs and must not include wildcards."
+  }
 }
-

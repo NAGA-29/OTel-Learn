@@ -22,6 +22,9 @@ class SupplierApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.email', 'test@example.com');
         $this->assertDatabaseHas(Supplier::class, ['id' => $id]);
+
+        $this->postJson('/api/suppliers', [])
+            ->assertUnprocessable()
+            ->assertHeader('X-Request-ID');
     }
 }
-

@@ -9,7 +9,7 @@ extensions:
 
 receivers:
   filelog/laravel:
-    include: [/var/log/laravel/*.json.log]
+    include: [/var/log/laravel/laravel.json-*.log]
     start_at: beginning
     storage: file_storage
     include_file_path: true
@@ -91,6 +91,7 @@ exporters:
       enabled: true
       storage: file_storage
       queue_size: 1000
+      block_on_overflow: true
 
 service:
   extensions: [file_storage]

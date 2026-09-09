@@ -10,6 +10,7 @@ function App() {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [error, setError] = React.useState('');
+  const selectedRequest = React.useRef(0);
 
   const load = React.useCallback(async () => {
     const response = await fetch('/api/suppliers');
@@ -20,9 +21,10 @@ function App() {
   React.useEffect(() => { load().catch((e) => setError(String(e))); }, [load]);
 
   async function show(id: number) {
+    const request = ++selectedRequest.current;
     const response = await fetch(`/api/suppliers/${id}`);
     const json = await response.json();
-    setSelected(json.data);
+    if (request === selectedRequest.current) setSelected(json.data);
   }
 
   async function create(event: React.FormEvent) {
@@ -30,7 +32,7 @@ function App() {
     setError('');
     const response = await fetch('/api/suppliers', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       body: JSON.stringify({name, email}),
     });
     if (!response.ok) {
@@ -67,4 +69,3 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
-

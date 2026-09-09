@@ -1,6 +1,6 @@
 FROM composer:2 AS vendor
 WORKDIR /app
-COPY composer.json ./
+COPY composer.json composer.lock ./
 RUN composer install --no-interaction --no-progress --prefer-dist --no-scripts
 
 FROM php:8.4-cli-alpine
@@ -13,5 +13,5 @@ COPY . .
 RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && php artisan package:discover --ansi
+USER www-data
 EXPOSE 8000
-

@@ -9,7 +9,7 @@ extensions:
 
 receivers:
   filelog/laravel:
-    include: [/var/log/laravel/*.json.log]
+    include: [/var/log/laravel/laravel.json-*.log]
     start_at: beginning
     storage: file_storage
     include_file_path: true

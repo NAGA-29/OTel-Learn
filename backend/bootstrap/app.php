@@ -16,6 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [RequestLoggingMiddleware::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Laravel's default exception rendering is sufficient for this PoC.
-    })->create();
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response): \Symfony\Component\HttpFoundation\Response {
+            $request = app(\Illuminate\Http\Request::class);
+            $requestId = $request->attributes->get('request_id');
+            $startedAt = $request->attributes->get('request_started_at');
 
+            if ($requestId !== null && $startedAt !== null) {
+                $response->headers->set('X-Request-ID', $requestId);
+                RequestLoggingMiddleware::writeAccessLog($request, $requestId, $response->getStatusCode(), $startedAt);
+            }
+
+            return $response;
+        });
+    })->create();
