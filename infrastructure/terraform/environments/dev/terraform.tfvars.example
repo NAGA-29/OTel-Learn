@@ -1,0 +1,9 @@
+aws_region         = "ap-northeast-1"
+environment        = "dev"
+project_name       = "otel-demo"
+bucket_name        = "replace-with-a-globally-unique-otel-demo-log-bucket"
+log_retention_days = 365
+
+# Roleを作る場合のみ、AssumeRoleを許可する既存principalを指定する。
+# ローカルPoCは通常、既存AWS_PROFILEへcollector_policy_arnを付与して使う。
+collector_role_principal_arns = []

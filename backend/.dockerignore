@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+auth.json
+storage/logs/
+vendor/
+node_modules/
+.git/
+bootstrap/cache/*.php
