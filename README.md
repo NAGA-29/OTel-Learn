@@ -75,6 +75,24 @@ curl -i -X POST http://localhost:8000/api/suppliers \
 
 レスポンスにはアプリケーション側の `X-Request-ID` が付きます。
 
+## Logs と Metrics の役割
+
+現段階では、ログの保存・検索基盤として Loki を導入しています。Prometheus はまだ導入していませんが、将来メトリクスを追加するときは Grafana から Loki と Prometheus の両方を参照する構成になります。
+
+```text
+Laravel → Collector → Loki       → Grafana  # 「何が起きたか」を読むログ
+サーバー / アプリ → Prometheus  → Grafana  # 「どのくらいか」を追う数値メトリクス
+```
+
+|用途|Loki|Prometheus|
+|---|---|---|
+|扱うデータ|本文付きのイベントログ|数値の時系列メトリクス|
+|代表例|`request completed`、例外、業務イベント|CPU・メモリ、アクセス数、5xx件数、p95レイテンシ|
+|答えられる問い|「このリクエストで何が起きたか」|「5xxはいつから何件/分に増えたか」|
+|保存・検索|Loki / LogQL|Prometheus / PromQL|
+
+Prometheus は対象サーバーに必ず入れる単一のエージェントではなく、メトリクスを収集・保存・検索するサーバーです。CPU・メモリなどのホスト情報は `node_exporter`、Dockerコンテナ情報は cAdvisor、アプリ固有のHTTP件数・レイテンシはアプリまたは OTel Collector が公開する `/metrics` を Prometheus が定期的に取得（pull）します。
+
 ## Laravel raw log
 
 LaravelはSemantic Conventionsを知らず、MonologのJSONを日次ローテーション（14ファイル保持）で出します。
