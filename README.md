@@ -45,6 +45,8 @@ make up
 
 Grafana の既定パスワードは `.env` の `GRAFANA_ADMIN_PASSWORD` で変更できます。これはローカルのデモ構成です。本番環境では強いパスワードと適切な認証・認可を設定してください。
 
+> **セキュリティに関する注意**: このデモの API には認証・認可がありません。インターネットや共有ネットワークへ公開せず、本番化する際はすべての更新系 API（作成・削除を含む）へ認証とリソース単位の認可 Policy を追加してください。
+
 `collector-init` は永続化ボリュームを Collector の実行ユーザー（UID 10001）が書き込めるように初期化する一回限りの補助サービスです。Collector を root で実行しないために必要であり、`Exited (0)` と表示されるのは正常です。
 
 ## Grafana / Loki でログを確認する
@@ -161,7 +163,6 @@ make collector-logs
     "http.route": "/api/suppliers/{id}",
     "http.response.status_code": 200,
     "url.full": "http://localhost:8000/api/suppliers/1",
-    "client.address": "192.168.65.1",
     "app.request.id": "434ef4e3-bfb7-4d50-a71a-20257a4dfc16",
     "duration_ms": 42.7
   }
@@ -170,12 +171,12 @@ make collector-logs
 
 Processor順:
 
-1. `transform/redact`: `password`、`authorization`、`cookie`、`token`、`access_token`、`refresh_token` を削除
+1. `transform/redact`: `password`、`authorization`、`cookie`、`token`、`access_token`、`refresh_token`、`ip`、`user_id` を export 前に削除
 2. `transform/normalize`: Monolog bodyをOTel Body・Severity・Attributesへ変換
 3. `resource/common`: service/deployment情報をResourceへ付与
 4. `batch`: debug/S3送信をまとめる
 
-アプリでも秘密情報を出さないことが第一防御です。Collector redactionは第二防御であり、自由文message内の秘密を完全検出するDLPではありません。
+アプリでも秘密情報を出さないことが第一防御です。Collector redactionは第二防御であり、自由文message内の秘密を完全検出するDLPではありません。IP アドレスとユーザー ID はローカルの Laravel ログには残り得ますが、Collector から Loki / S3 へは送信しません。
 
 | Monolog | OTel Severity Number |
 |---|---:|

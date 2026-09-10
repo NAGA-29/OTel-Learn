@@ -76,7 +76,7 @@ function App() {
       <ul>{suppliers.map((supplier) => <li key={supplier.id}>
         <button onClick={() => show(supplier.id)}>{supplier.name}</button>
         <span>{supplier.email}</span>
-        <button className="danger" onClick={() => remove(supplier)} disabled={deletingId === supplier.id}>
+        <button className="danger" onClick={() => remove(supplier)} disabled={deletingId !== null}>
           {deletingId === supplier.id ? '削除中…' : '削除'}
         </button>
       </li>)}</ul>

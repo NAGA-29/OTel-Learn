@@ -74,11 +74,11 @@ LogQL は Loki の検索言語です。まずは波かっこの中でサービ�
 |目的|LogQL|
 |---|---|
 |このアプリの全ログ|`{service_name="otel-laravel-demo"}`|
-|HTTPアクセスログだけ|`{service_name="otel-laravel-demo", app_log_type="http_access"}`|
-|GET リクエストだけ|`{service_name="otel-laravel-demo", http_request_method="GET"}`|
-|404 を含むログ|`{service_name="otel-laravel-demo", http_response_status_code="404"}`|
-|メッセージに `Supplier` を含むログ|`{service_name="otel-laravel-demo"} |= "Supplier"`|
-|特定リクエストを追跡|`{service_name="otel-laravel-demo", app_request_id="<request-id>"}`|
+|HTTPアクセスログだけ|`{service_name="otel-laravel-demo"} \| app_log_type="http_access"`|
+|GET リクエストだけ|`{service_name="otel-laravel-demo"} \| http_request_method="GET"`|
+|404 を含むログ|`{service_name="otel-laravel-demo"} \| http_response_status_code="404"`|
+|メッセージに `Supplier` を含むログ|`{service_name="otel-laravel-demo"} \|= "Supplier"`|
+|特定リクエストを追跡|`{service_name="otel-laravel-demo"} \| app_request_id="<request-id>"`|
 
 `app_request_id` は、1回の HTTP リクエストに対する識別子です。同じ値で `Supplier fetched` と `request completed` を横断検索できるため、「どの処理が何ミリ秒で終わったか」を追えます。
 

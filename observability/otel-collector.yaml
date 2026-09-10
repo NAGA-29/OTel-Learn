@@ -34,6 +34,8 @@ processors:
           - delete_key(body["context"], "token") where IsMap(body["context"])
           - delete_key(body["context"], "access_token") where IsMap(body["context"])
           - delete_key(body["context"], "refresh_token") where IsMap(body["context"])
+          - delete_key(body["context"], "ip") where IsMap(body["context"])
+          - delete_key(body["context"], "user_id") where IsMap(body["context"])
   transform/normalize:
     error_mode: ignore
     log_statements:
@@ -54,8 +56,6 @@ processors:
           - set(attributes["http.route"], cache["raw"]["context"]["route"]) where cache["raw"]["context"]["route"] != nil
           - set(attributes["http.response.status_code"], cache["raw"]["context"]["status_code"]) where cache["raw"]["context"]["status_code"] != nil
           - set(attributes["url.full"], cache["raw"]["context"]["url"]) where cache["raw"]["context"]["url"] != nil
-          - set(attributes["client.address"], cache["raw"]["context"]["ip"]) where cache["raw"]["context"]["ip"] != nil
-          - set(attributes["user.id"], cache["raw"]["context"]["user_id"]) where cache["raw"]["context"]["user_id"] != nil
           - set(attributes["duration_ms"], cache["raw"]["context"]["duration_ms"]) where cache["raw"]["context"]["duration_ms"] != nil
           - set(attributes["app.supplier.id"], cache["raw"]["context"]["supplier_id"]) where cache["raw"]["context"]["supplier_id"] != nil
           - set(attributes["app.supplier.count"], cache["raw"]["context"]["supplier_count"]) where cache["raw"]["context"]["supplier_count"] != nil
