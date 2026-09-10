@@ -93,6 +93,21 @@ Laravel → Collector → Loki       → Grafana  # 「何が起きたか」を�
 
 Prometheus は対象サーバーに必ず入れる単一のエージェントではなく、メトリクスを収集・保存・検索するサーバーです。CPU・メモリなどのホスト情報は `node_exporter`、Dockerコンテナ情報は cAdvisor、アプリ固有のHTTP件数・レイテンシはアプリまたは OTel Collector が公開する `/metrics` を Prometheus が定期的に取得（pull）します。
 
+### 将来の監視・通知の全体像
+
+Tempo と Alertmanager は現段階では未導入です。Tempo は分散トレースを保存する基盤で、1つのリクエストが複数サービスを通るときに、どこで時間がかかったかを追跡します。Alertmanager はアラートを保存するDBではなく、発火したアラートの集約、重複抑制、通知先への配送を担当します。
+
+```text
+Echo / Laravel → Collector → Loki  → Grafana Explore  # ログ調査
+Echo / Laravel → Collector → Tempo → Grafana Explore  # リクエスト経路・遅延調査
+node_exporter / アプリ → Prometheus → Grafana         # メトリクスの可視化
+Prometheus の alert rule → Alertmanager → Slack / Email / PagerDuty
+```
+
+標準的な Prometheus 構成では、Prometheus が alert rule を評価して Alertmanager へ送信します。Alertmanager 側で通知先、通知のグループ化、抑制（silence）、依存障害の通知抑止（inhibition）を設定します。
+
+Grafana でも **Alerts & IRM** から Grafana-managed alert rule、通知先（Contact point）、通知ポリシーを設定できます。これは Grafana 内蔵 Alertmanager を使う方法です。外部の Prometheus Alertmanager を Grafana にデータソースとして登録し、silence の確認・管理や、Grafana で作成したアラートの転送を行うこともできます。ただし Prometheus Alertmanager の通知先・通知ポリシーは通常 `alertmanager.yml` または構成管理で設定し、Grafana では読み取り専用です。
+
 ## Laravel raw log
 
 LaravelはSemantic Conventionsを知らず、MonologのJSONを日次ローテーション（14ファイル保持）で出します。
