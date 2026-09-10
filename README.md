@@ -37,7 +37,9 @@ make up
 - React: <http://localhost:5173>
 - Laravel API: <http://localhost:8000/api/suppliers>
 - Health check: <http://localhost:8000/up>
-- Grafana: <http://localhost:3000> （ユーザー名: `admin`、パスワード: `.env` の `GRAFANA_ADMIN_PASSWORD`）
+- Grafana: <http://localhost:3000> （ユーザー名: `admin`、パスワード: `admin`）
+
+Grafana の既定パスワードは `.env` の `GRAFANA_ADMIN_PASSWORD` で変更できます。これはローカルのデモ構成です。本番環境では強いパスワードと適切な認証・認可を設定してください。
 
 `collector-init` は永続化ボリュームを Collector の実行ユーザー（UID 10001）が書き込めるように初期化する一回限りの補助サービスです。Collector を root で実行しないために必要であり、`Exited (0)` と表示されるのは正常です。
 
