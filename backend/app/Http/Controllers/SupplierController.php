@@ -35,5 +35,13 @@ class SupplierController extends Controller
         Log::info('Supplier created', ['supplier_id' => $supplier->id]);
         return response()->json(['data' => $supplier], 201);
     }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $supplier = $this->suppliers->delete($id);
+        Log::info('Supplier deleted', ['supplier_id' => $supplier->id]);
+
+        return response()->json(null, 204);
+    }
 }
 

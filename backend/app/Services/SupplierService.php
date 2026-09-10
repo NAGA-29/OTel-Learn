@@ -23,5 +23,12 @@ class SupplierService
     {
         return Supplier::query()->create($data);
     }
-}
 
+    public function delete(int $id): Supplier
+    {
+        $supplier = $this->find($id);
+        $supplier->delete();
+
+        return $supplier;
+    }
+}

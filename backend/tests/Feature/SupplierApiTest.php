@@ -23,6 +23,12 @@ class SupplierApiTest extends TestCase
             ->assertJsonPath('data.email', 'test@example.com');
         $this->assertDatabaseHas(Supplier::class, ['id' => $id]);
 
+        $this->deleteJson("/api/suppliers/{$id}")
+            ->assertNoContent()
+            ->assertHeader('X-Request-ID');
+        $this->assertDatabaseMissing(Supplier::class, ['id' => $id]);
+        $this->getJson("/api/suppliers/{$id}")->assertNotFound();
+
         $this->postJson('/api/suppliers', [])
             ->assertUnprocessable()
             ->assertHeader('X-Request-ID');
