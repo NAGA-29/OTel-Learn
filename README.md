@@ -47,6 +47,8 @@ Grafana の既定パスワードは `.env` の `GRAFANA_ADMIN_PASSWORD` で変�
 
 Collector は正規化済みログを debug exporter に加えて Loki のネイティブ OTLP endpoint へ送信します。Grafana へログインし、左メニューの **Explore** でデータソース `Loki` を選びます。まずは次の LogQL で全ログを確認できます。
 
+初めて使う場合は、起動から検索までを説明した [Grafana ガイド](docs/grafana/README.md) を参照してください。
+
 ```logql
 {service_name="otel-laravel-demo"}
 ```
