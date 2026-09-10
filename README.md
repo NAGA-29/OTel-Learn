@@ -10,6 +10,8 @@ flowchart LR
     Laravel --> PostgreSQL
     Laravel -->|Monolog JSON file| Collector[OTel Collector]
     Collector --> Debug[Debug exporter]
+    Collector -->|OTLP/HTTP| Loki
+    Grafana -->|LogQL query| Loki
     Collector --> S3[(AWS S3)]
     Terraform -->|bucket / IAM / lifecycle| S3
 ```
@@ -18,6 +20,8 @@ flowchart LR
 |---|---|
 | Laravel | 何が起きたかをアプリケーション語彙でJSON出力する |
 | Collector | parse、redact、normalize、resource付与、routeを行う |
+| Loki | 正規化済みOTelログをローカルvolumeへ保存し、LogQL検索を提供する |
+| Grafana | LokiのログをExplore・ダッシュボードで検索・可視化する |
 | Terraform | Bucket・暗号化・Lifecycle・最小IAM権限を再現可能にする |
 | S3 | 検索エンジンではなく、監査・長期保存・再分析の原本を持つ |
 
