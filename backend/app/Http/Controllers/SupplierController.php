@@ -32,8 +32,15 @@ class SupplierController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:suppliers,email'],
         ]);
         $supplier = $this->suppliers->create($validated);
-        Log::info('Supplier created', ['supplier_id' => $supplier->id]);
+        Log::info('Supplier created', ['supplier_id' => $supplier->id, 'name' => $supplier->name]);
         return response()->json(['data' => $supplier], 201);
     }
-}
 
+    public function destroy(int $id): JsonResponse
+    {
+        $supplier = $this->suppliers->delete($id);
+        Log::info('Supplier deleted', ['supplier_id' => $supplier->id]);
+
+        return response()->json(null, 204);
+    }
+}

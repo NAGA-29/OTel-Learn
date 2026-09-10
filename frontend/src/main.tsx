@@ -10,6 +10,7 @@ function App() {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [error, setError] = React.useState('');
+  const [deletingId, setDeletingId] = React.useState<number | null>(null);
   const selectedRequest = React.useRef(0);
 
   const load = React.useCallback(async () => {
@@ -43,6 +44,30 @@ function App() {
     await load();
   }
 
+  async function remove(supplier: Supplier) {
+    if (!window.confirm(`「${supplier.name}」を削除しますか？`)) return;
+
+    setError('');
+    selectedRequest.current += 1;
+    setDeletingId(supplier.id);
+    try {
+      const response = await fetch(`/api/suppliers/${supplier.id}`, {
+        method: 'DELETE',
+        headers: {'Accept': 'application/json'},
+      });
+      if (!response.ok) {
+        setError(`削除に失敗しました (${response.status})`);
+        return;
+      }
+      if (selected?.id === supplier.id) setSelected(null);
+      await load();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return <main>
     <header><p>Framework-independent logging pipeline</p><h1>Supplier Demo</h1></header>
     {error && <p className="error">{error}</p>}
@@ -51,6 +76,9 @@ function App() {
       <ul>{suppliers.map((supplier) => <li key={supplier.id}>
         <button onClick={() => show(supplier.id)}>{supplier.name}</button>
         <span>{supplier.email}</span>
+        <button className="danger" onClick={() => remove(supplier)} disabled={deletingId !== null}>
+          {deletingId === supplier.id ? '削除中…' : '削除'}
+        </button>
       </li>)}</ul>
     </section>
     <section>

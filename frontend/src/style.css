@@ -7,10 +7,11 @@ section { background: white; border: 1px solid #dde2ec; border-radius: 12px; pad
 ul { list-style: none; padding: 0; }
 li { display: flex; gap: 16px; align-items: center; padding: 8px 0; border-bottom: 1px solid #edf0f6; }
 button { background: #3147d7; color: white; border: 0; border-radius: 7px; padding: 9px 13px; cursor: pointer; }
-li button { min-width: 220px; text-align: left; }
+li button:first-child { min-width: 220px; text-align: left; }
+.danger { background: #b42318; }
+button:disabled { cursor: wait; opacity: 0.6; }
 form { display: grid; gap: 12px; }
 label { display: grid; gap: 5px; }
 input { padding: 9px; border: 1px solid #bbc3d2; border-radius: 6px; }
 dt { color: #69738a; font-size: 12px; } dd { margin: 2px 0 12px; }
 .error { color: #a00; }
-

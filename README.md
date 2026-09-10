@@ -10,6 +10,8 @@ flowchart LR
     Laravel --> PostgreSQL
     Laravel -->|Monolog JSON file| Collector[OTel Collector]
     Collector --> Debug[Debug exporter]
+    Collector -->|OTLP/HTTP| Loki
+    Grafana -->|LogQL query| Loki
     Collector --> S3[(AWS S3)]
     Terraform -->|bucket / IAM / lifecycle| S3
 ```
@@ -18,6 +20,8 @@ flowchart LR
 |---|---|
 | Laravel | 何が起きたかをアプリケーション語彙でJSON出力する |
 | Collector | parse、redact、normalize、resource付与、routeを行う |
+| Loki | 正規化済みOTelログをローカルvolumeへ保存し、LogQL検索を提供する |
+| Grafana | LokiのログをExplore・ダッシュボードで検索・可視化する |
 | Terraform | Bucket・暗号化・Lifecycle・最小IAM権限を再現可能にする |
 | S3 | 検索エンジンではなく、監査・長期保存・再分析の原本を持つ |
 
@@ -37,6 +41,31 @@ make up
 - React: <http://localhost:5173>
 - Laravel API: <http://localhost:8000/api/suppliers>
 - Health check: <http://localhost:8000/up>
+- Grafana: <http://localhost:3000> （ユーザー名: `admin`、パスワード: `admin`）
+
+Grafana の既定パスワードは `.env` の `GRAFANA_ADMIN_PASSWORD` で変更できます。これはローカルのデモ構成です。本番環境では強いパスワードと適切な認証・認可を設定してください。
+
+> **セキュリティに関する注意**: このデモの API には認証・認可がありません。インターネットや共有ネットワークへ公開せず、本番化する際はすべての更新系 API（作成・削除を含む）へ認証とリソース単位の認可 Policy を追加してください。
+
+`collector-init` は永続化ボリュームを Collector の実行ユーザー（UID 10001）が書き込めるように初期化する一回限りの補助サービスです。Collector を root で実行しないために必要であり、`Exited (0)` と表示されるのは正常です。
+
+## Grafana / Loki でログを確認する
+
+Collector は正規化済みログを debug exporter に加えて Loki のネイティブ OTLP endpoint へ送信します。Grafana へログインし、左メニューの **Explore** でデータソース `Loki` を選びます。まずは次の LogQL で全ログを確認できます。
+
+初めて使う場合は、起動から検索までを説明した [Grafana ガイド](docs/grafana/README.md) を参照してください。
+
+```logql
+{service_name="otel-laravel-demo"}
+```
+
+OTel属性は Loki の Structured Metadata として保存されます。例えばアクセスログだけを見るには次を使います。
+
+```logql
+{service_name="otel-laravel-demo"} | app_log_type=`http_access`
+```
+
+`app_request_id` で特定リクエストの domain log と access log を横断して絞り込むこともできます。Loki / Grafana の起動ログは `make grafana-logs`、Collector の標準出力は `make collector-logs` で確認できます。
 
 ```bash
 curl -s http://localhost:8000/api/suppliers
@@ -47,6 +76,39 @@ curl -i -X POST http://localhost:8000/api/suppliers \
 ```
 
 レスポンスにはアプリケーション側の `X-Request-ID` が付きます。
+
+## Logs と Metrics の役割
+
+現段階では、ログの保存・検索基盤として Loki を導入しています。Prometheus はまだ導入していませんが、将来メトリクスを追加するときは Grafana から Loki と Prometheus の両方を参照する構成になります。
+
+```text
+Laravel → Collector → Loki       → Grafana  # 「何が起きたか」を読むログ
+サーバー / アプリ → Prometheus  → Grafana  # 「どのくらいか」を追う数値メトリクス
+```
+
+|用途|Loki|Prometheus|
+|---|---|---|
+|扱うデータ|本文付きのイベントログ|数値の時系列メトリクス|
+|代表例|`request completed`、例外、業務イベント|CPU・メモリ、アクセス数、5xx件数、p95レイテンシ|
+|答えられる問い|「このリクエストで何が起きたか」|「5xxはいつから何件/分に増えたか」|
+|保存・検索|Loki / LogQL|Prometheus / PromQL|
+
+Prometheus は対象サーバーに必ず入れる単一のエージェントではなく、メトリクスを収集・保存・検索するサーバーです。CPU・メモリなどのホスト情報は `node_exporter`、Dockerコンテナ情報は cAdvisor、アプリ固有のHTTP件数・レイテンシはアプリまたは OTel Collector が公開する `/metrics` を Prometheus が定期的に取得（pull）します。
+
+### 将来の監視・通知の全体像
+
+Tempo と Prometheus Alertmanager は現段階では未導入です。Tempo は分散トレースを保存する基盤で、1つのリクエストが複数サービスを通るときに、どこで時間がかかったかを追跡します。Prometheus Alertmanager はアラートを保存するDBではなく、発火したアラートの集約、重複抑制、通知先への配送を担当します。
+
+```text
+Echo / Laravel → Collector → Loki  → Grafana Explore  # ログ調査
+Echo / Laravel → Collector → Tempo → Grafana Explore  # リクエスト経路・遅延調査
+node_exporter / アプリ → Prometheus → Grafana         # メトリクスの可視化
+Prometheus の alert rule → Prometheus Alertmanager → Slack / Email / PagerDuty
+```
+
+標準的な Prometheus 構成では、Prometheus が alert rule を評価して Prometheus Alertmanager へ送信します。Prometheus Alertmanager 側で通知先、通知のグループ化、抑制（silence）、依存障害の通知抑止（inhibition）を設定します。
+
+Grafana でも **Alerts & IRM** から Grafana-managed alert rule、通知先（Contact point）、通知ポリシーを設定できます。これは Grafana Alertmanager（Grafana 内蔵の通知管理機能）を使う方法です。外部の Prometheus Alertmanager を Grafana にデータソースとして登録し、silence の確認・管理や、Grafana で作成したアラートの転送を行うこともできます。ただし Prometheus Alertmanager の通知先・通知ポリシーは通常 `alertmanager.yml` または構成管理で設定し、Grafana では読み取り専用です。
 
 ## Laravel raw log
 
@@ -101,7 +163,6 @@ make collector-logs
     "http.route": "/api/suppliers/{id}",
     "http.response.status_code": 200,
     "url.full": "http://localhost:8000/api/suppliers/1",
-    "client.address": "192.168.65.1",
     "app.request.id": "434ef4e3-bfb7-4d50-a71a-20257a4dfc16",
     "duration_ms": 42.7
   }
@@ -110,12 +171,12 @@ make collector-logs
 
 Processor順:
 
-1. `transform/redact`: `password`、`authorization`、`cookie`、`token`、`access_token`、`refresh_token` を削除
+1. `transform/redact`: `password`、`authorization`、`cookie`、`token`、`access_token`、`refresh_token`、`ip`、`user_id` を export 前に削除
 2. `transform/normalize`: Monolog bodyをOTel Body・Severity・Attributesへ変換
 3. `resource/common`: service/deployment情報をResourceへ付与
 4. `batch`: debug/S3送信をまとめる
 
-アプリでも秘密情報を出さないことが第一防御です。Collector redactionは第二防御であり、自由文message内の秘密を完全検出するDLPではありません。
+アプリでも秘密情報を出さないことが第一防御です。Collector redactionは第二防御であり、自由文message内の秘密を完全検出するDLPではありません。IP アドレスとユーザー ID はローカルの Laravel ログには残り得ますが、Collector から Loki / S3 へは送信しません。
 
 | Monolog | OTel Severity Number |
 |---|---:|
@@ -227,6 +288,11 @@ Phase 2でOpenTelemetry PHP SDKによるtrace、Phase 3でlogへ `trace_id` / `s
 ## References
 
 - [OpenTelemetry Logs](https://opentelemetry.io/docs/concepts/signals/logs/)
+- [OpenTelemetry Collector overview](https://opentelemetry.io/docs/collector/)
+- [OpenTelemetry Collector configuration](https://opentelemetry.io/docs/collector/configuration/)
+- [OpenTelemetry Collector Contrib components](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/README.md)
 - [AWS S3 Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awss3exporter)
 - [File Log Receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/filelogreceiver)
 - [File Storage Extension](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/storage/filestorage)
+- [Transform Processor / OTTL](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor)
+- [Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter)

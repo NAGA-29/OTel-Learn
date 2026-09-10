@@ -56,6 +56,33 @@ services:
     depends_on:
       - backend
 
+  loki:
+    image: grafana/loki:3.5.5
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning/datasources/loki.yaml:/etc/grafana/provisioning/datasources/loki.yaml:ro
+    depends_on:
+      - loki
+
+  collector-init:
+    image: busybox:1.37.0
+    command: ["chown", "-R", "10001:10001", "/var/lib/otelcol"]
+    volumes:
+      - collector-state:/var/lib/otelcol
+
   collector:
     image: otel/opentelemetry-collector-contrib:0.136.0
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
@@ -67,7 +94,12 @@ services:
       - laravel-logs:/var/log/laravel:ro
       - collector-state:/var/lib/otelcol
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      collector-init:
+        condition: service_completed_successfully
+      loki:
+        condition: service_started
 
   collector-s3:
     profiles: ["aws"]
@@ -86,7 +118,12 @@ services:
       - collector-state:/var/lib/otelcol
       - ${HOME}/.aws:/home/otelcol-contrib/.aws:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      collector-init:
+        condition: service_completed_successfully
+      loki:
+        condition: service_started
 
 volumes:
   postgres-data:
@@ -94,3 +131,5 @@ volumes:
   frontend-node-modules:
   laravel-logs:
   collector-state:
+  loki-data:
+  grafana-data:

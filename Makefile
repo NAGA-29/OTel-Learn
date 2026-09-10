@@ -1,11 +1,11 @@
 SHELL := /bin/sh
 TF_DIR := infrastructure/terraform/environments/dev
 
-.PHONY: up down logs backend frontend collector-logs test smoke-test aws-up aws-down tf-init tf-fmt tf-validate tf-plan tf-apply tf-destroy tf-output
+.PHONY: up down logs backend frontend collector-logs grafana-logs test smoke-test aws-up aws-down tf-init tf-fmt tf-validate tf-plan tf-apply tf-destroy tf-output
 
 up:
 	-docker compose stop collector-s3
-	docker compose up -d postgres backend frontend collector
+	docker compose up -d postgres backend frontend loki grafana collector
 
 down:
 	docker compose --profile aws down
@@ -21,6 +21,9 @@ frontend:
 
 collector-logs:
 	docker compose logs -f collector collector-s3
+
+grafana-logs:
+	docker compose logs -f grafana loki
 
 test:
 	docker compose exec backend php artisan test

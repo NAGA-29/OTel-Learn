@@ -19,8 +19,8 @@ receivers:
         parse_to: body
         timestamp:
           parse_from: body.datetime
-          layout_type: strptime
-          layout: '%Y-%m-%dT%H:%M:%S.%f%z'
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05.999999-07:00'
 
 processors:
   transform/redact:
@@ -34,6 +34,8 @@ processors:
           - delete_key(body["context"], "token") where IsMap(body["context"])
           - delete_key(body["context"], "access_token") where IsMap(body["context"])
           - delete_key(body["context"], "refresh_token") where IsMap(body["context"])
+          - delete_key(body["context"], "ip") where IsMap(body["context"])
+          - delete_key(body["context"], "user_id") where IsMap(body["context"])
   transform/normalize:
     error_mode: ignore
     log_statements:
@@ -54,8 +56,6 @@ processors:
           - set(attributes["http.route"], cache["raw"]["context"]["route"]) where cache["raw"]["context"]["route"] != nil
           - set(attributes["http.response.status_code"], cache["raw"]["context"]["status_code"]) where cache["raw"]["context"]["status_code"] != nil
           - set(attributes["url.full"], cache["raw"]["context"]["url"]) where cache["raw"]["context"]["url"] != nil
-          - set(attributes["client.address"], cache["raw"]["context"]["ip"]) where cache["raw"]["context"]["ip"] != nil
-          - set(attributes["user.id"], cache["raw"]["context"]["user_id"]) where cache["raw"]["context"]["user_id"] != nil
           - set(attributes["duration_ms"], cache["raw"]["context"]["duration_ms"]) where cache["raw"]["context"]["duration_ms"] != nil
           - set(attributes["app.supplier.id"], cache["raw"]["context"]["supplier_id"]) where cache["raw"]["context"]["supplier_id"] != nil
           - set(attributes["app.supplier.count"], cache["raw"]["context"]["supplier_count"]) where cache["raw"]["context"]["supplier_count"] != nil
@@ -82,6 +82,13 @@ processors:
 exporters:
   debug:
     verbosity: detailed
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 1000
+      block_on_overflow: true
 
 service:
   extensions: [file_storage]
@@ -89,4 +96,4 @@ service:
     logs:
       receivers: [filelog/laravel]
       processors: [transform/redact, transform/normalize, resource/common, batch]
-      exporters: [debug]
+      exporters: [debug, otlphttp/loki]
