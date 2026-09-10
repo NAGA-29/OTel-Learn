@@ -73,6 +73,13 @@ processors:
 exporters:
   debug:
     verbosity: detailed
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 1000
+      block_on_overflow: true
   awss3:
     marshaler: otlp_json
     s3uploader:
@@ -99,4 +106,4 @@ service:
     logs:
       receivers: [filelog/laravel]
       processors: [transform/redact, transform/normalize, resource/common, batch]
-      exporters: [debug, awss3]
+      exporters: [debug, otlphttp/loki, awss3]

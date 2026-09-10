@@ -82,6 +82,13 @@ processors:
 exporters:
   debug:
     verbosity: detailed
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 1000
+      block_on_overflow: true
 
 service:
   extensions: [file_storage]
@@ -89,4 +96,4 @@ service:
     logs:
       receivers: [filelog/laravel]
       processors: [transform/redact, transform/normalize, resource/common, batch]
-      exporters: [debug]
+      exporters: [debug, otlphttp/loki]

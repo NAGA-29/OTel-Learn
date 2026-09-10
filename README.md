@@ -37,8 +37,25 @@ make up
 - React: <http://localhost:5173>
 - Laravel API: <http://localhost:8000/api/suppliers>
 - Health check: <http://localhost:8000/up>
+- Grafana: <http://localhost:3000> （ユーザー名: `admin`、パスワード: `.env` の `GRAFANA_ADMIN_PASSWORD`）
 
 `collector-init` は永続化ボリュームを Collector の実行ユーザー（UID 10001）が書き込めるように初期化する一回限りの補助サービスです。Collector を root で実行しないために必要であり、`Exited (0)` と表示されるのは正常です。
+
+## Grafana / Loki でログを確認する
+
+Collector は正規化済みログを debug exporter に加えて Loki のネイティブ OTLP endpoint へ送信します。Grafana へログインし、左メニューの **Explore** でデータソース `Loki` を選びます。まずは次の LogQL で全ログを確認できます。
+
+```logql
+{service_name="otel-laravel-demo"}
+```
+
+OTel属性は Loki の Structured Metadata として保存されます。例えばアクセスログだけを見るには次を使います。
+
+```logql
+{service_name="otel-laravel-demo"} | app_log_type=`http_access`
+```
+
+`app_request_id` で特定リクエストの domain log と access log を横断して絞り込むこともできます。Loki / Grafana の起動ログは `make grafana-logs`、Collector の標準出力は `make collector-logs` で確認できます。
 
 ```bash
 curl -s http://localhost:8000/api/suppliers
